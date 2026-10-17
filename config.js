@@ -7,5 +7,5 @@
 window.APP_CONFIG = {
   title: '과제물 제출',
   className: '',          // 예: '3학년 2반'
-  apiUrl: '',             // 예: 'https://script.google.com/macros/s/XXXX/exec'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbwU1xr1sP-3CS3CZzWQgTCEeC8woOfe2BVSA5mjcH6iG9QHSHDj5dtsBaPpuOx-h1jb/exec',
 };
