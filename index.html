@@ -92,7 +92,19 @@
   .close { margin-top: 12px; background: none; border: 0; color: var(--sub); font-size: 16px; cursor: pointer; padding: 8px; }
 
   [hidden] { display: none !important; }
+  /* 첫 화면 */
+  #home { min-height: calc(100vh - 220px); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 48px; }
+  #home .ask { margin: 0; font-size: clamp(40px, 8vw, 84px); font-weight: 900; letter-spacing: -1px; line-height: 1.25; word-break: keep-all; }
+  #home .ask span { color: var(--brand); }
+  #startBtn { width: min(480px, 100%); font-size: 32px; font-weight: 800; padding: 26px; border: 0; border-radius: 22px;
+    background: var(--brand); color: #fff; cursor: pointer; box-shadow: 0 10px 24px rgba(47,111,237,.3); transition: transform .08s; }
+  #startBtn:active { transform: scale(.97); }
+  .steptop { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .steptop h2 { margin-bottom: 20px; }
+
   @media (max-width: 600px) {
+    #home { gap: 32px; } #startBtn { font-size: 26px; padding: 20px; }
     header { padding: 12px 16px; } header h1 { font-size: 20px; } header h1 small { display: none; }
     #adminSpot { font-size: 16px; }
     main { padding: 16px 16px 120px; }
@@ -112,8 +124,16 @@
 <main>
   <div id="loading" class="msg">명단을 불러오는 중…</div>
 
+  <section id="home" hidden>
+    <p class="ask">너 그거 <span>제출</span>했어?</p>
+    <button id="startBtn">제출하기</button>
+  </section>
+
   <section id="step1" hidden>
-    <h2><b>1</b> 내 이름을 눌러 주세요</h2>
+    <div class="steptop">
+      <h2><b>1</b> 내 이름을 눌러 주세요</h2>
+      <button class="btn-ghost" id="homeBtn">← 처음으로</button>
+    </div>
     <div id="students" class="grid"></div>
   </section>
 
@@ -171,7 +191,7 @@ function tick() {
 tick(); setInterval(tick, 10000);
 
 function show(id) {
-  ['loading', 'step1', 'step2', 'done'].forEach(s => $(s).hidden = s !== id);
+  ['loading', 'home', 'step1', 'step2', 'done'].forEach(s => $(s).hidden = s !== id);
   window.scrollTo(0, 0);
 }
 
@@ -179,7 +199,7 @@ async function load(quiet) {
   try {
     data = await Api.call('getStudentData');
     renderStudents();
-    if (!me) show('step1');
+    if (!$('loading').hidden) show('home');
   } catch (e) {
     if (quiet && data) return;
     $('loading').innerHTML = `<span class="err">불러오기 실패: ${esc(e.message || e)}</span><br>선생님께 알려 주세요.`;
@@ -192,6 +212,10 @@ function renderStudents() {
     ? data.students.map((s, i) => `<button class="stu" data-i="${i}">${esc(s.name)}<span>${esc(s.no)}번</span></button>`).join('')
     : '<div class="msg" style="grid-column:1/-1">등록된 학생이 없습니다.<br>선생님이 관리자 페이지에서 명단을 등록해 주세요.</div>';
 }
+
+// 첫 화면 → 학생 명단
+$('startBtn').addEventListener('click', () => { show('step1'); armIdle(); });
+$('homeBtn').addEventListener('click', reset);
 
 $('students').addEventListener('click', e => {
   const b = e.target.closest('.stu');
@@ -263,7 +287,7 @@ function reset() {
   clearTimeout(idleTimer);
   me = null;
   picked.clear();
-  if (data) show('step1');
+  if (data) show('home');
   load(true); // 다른 태블릿·교사 처리분까지 최신으로
 }
 
