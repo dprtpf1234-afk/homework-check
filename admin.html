@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 제출 현황</title>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #fff; --ink: #1d2433; --sub: #5f6b80; --line: #e3e8f0;
+    --brand: #2f6fed; --brand-soft: #e7efff; --ok: #1f9d55; --ok-soft: #e3f6ea;
+    --manual: #7a5ce0; --miss: #d64545; --miss-soft: #fdecec; --sheet: #188038;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; font-size: 15px; }
+  button, input, textarea { font: inherit; }
+  .btn { font-size: 14px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 10px; padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn:hover { border-color: var(--brand); color: var(--brand); }
+  .btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .btn.primary:hover { filter: brightness(1.08); color: #fff; }
+  .btn.sheet { background: var(--sheet); color: #fff; border-color: var(--sheet); }
+  .btn.sheet:hover { filter: brightness(1.1); color: #fff; }
+  .btn.danger { color: var(--miss); }
+  .btn.danger:hover { border-color: var(--miss); background: var(--miss-soft); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 12px 24px 0; }
+  .top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .top h1 { margin: 0; font-size: 21px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .badge { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 4px 10px; }
+  .badge.on { background: #e6f4ea; color: var(--sheet); }
+  .badge.off { background: #fff4d6; color: #7a5200; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  nav { display: flex; gap: 4px; margin-top: 12px; overflow-x: auto; }
+  nav button { border: 0; background: none; padding: 10px 16px; font-size: 15px; font-weight: 600; color: var(--sub);
+    border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+  nav button.on { color: var(--brand); border-bottom-color: var(--brand); }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 20px 24px 60px; }
+  .alert { background: var(--miss-soft); color: var(--miss); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-weight: 600; }
+  .panel { background: var(--card); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(20,30,60,.05); }
+  .panel h2 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .hint { color: var(--sub); font-size: 13px; line-height: 1.6; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text], input[type=url], input[type=password], input[type=date], textarea {
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; color: var(--ink); min-width: 0; }
+  input:focus, textarea:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+
+  /* 현황: 도넛 카드 */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--card); border: 2px solid transparent; border-radius: 14px; padding: 14px; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(20,30,60,.05); display: flex; gap: 12px; align-items: center; }
+  .card.sel { border-color: var(--brand); }
+  .donut { width: 64px; height: 64px; flex: none; }
+  .donut .trk { fill: none; stroke: #edf0f5; stroke-width: 8; }
+  .donut .val { fill: none; stroke: var(--brand); stroke-width: 8; stroke-linecap: round; }
+  .card.full .donut .val { stroke: var(--ok); }
+  .donut text { font-size: 14px; font-weight: 800; fill: var(--ink); }
+  .card .t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .m { color: var(--sub); font-size: 13px; margin-top: 3px; }
+  .card .m b { color: var(--ink); font-size: 16px; }
+  .card .late { color: var(--miss); font-weight: 700; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--miss-soft); color: var(--miss); border-radius: 99px; padding: 5px 12px; font-weight: 600; font-size: 14px; }
+  .allok { color: var(--ok); font-weight: 700; }
+
+  /* 현황: 표 */
+  .bar2 { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 10px; flex-wrap: wrap; gap: 8px; }
+  .bar2 label { color: var(--sub); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .tablewrap { overflow: auto; background: var(--card); border-radius: 14px; box-shadow: 0 1px 2px rgba(20,30,60,.05); max-height: 72vh; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+  thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 2; font-size: 13px; color: var(--sub); }
+  thead th.selcol { color: var(--brand); }
+  th.stu, td.stu { position: sticky; left: 0; background: var(--card); text-align: left; z-index: 1; font-weight: 600; }
+  thead th.stu { z-index: 3; background: #f8f9fc; }
+  tfoot td { position: sticky; bottom: 0; background: #f8f9fc; font-weight: 700; font-size: 13px; color: var(--sub); }
+  tfoot td.stu { background: #f8f9fc; }
+  td.stu small { color: var(--sub); font-weight: 400; margin-right: 6px; display: inline-block; width: 22px; text-align: right; }
+  td.c { cursor: pointer; }
+  td.c:hover { background: var(--brand-soft); }
+  .dot { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 2px dashed #cdd4e1; vertical-align: middle; }
+  .dot.on { background: var(--ok); border: 0; box-shadow: inset 0 0 0 3px rgba(255,255,255,.35); }
+  .dot.on.manual { background: var(--manual); }
+  .rate { display: flex; align-items: center; gap: 6px; justify-content: flex-end; font-size: 13px; color: var(--sub); }
+  .rate i { display: block; width: 60px; height: 6px; border-radius: 99px; background: #edf0f5; overflow: hidden; }
+  .rate i b { display: block; height: 100%; background: var(--ok); }
+  .rate.low i b { background: var(--miss); }
+
+  /* 과제 관리 */
+  .addform { display: grid; grid-template-columns: 1fr 170px auto; gap: 8px; }
+  .tlist { list-style: none; margin: 0; padding: 0; }
+  .tlist li { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .tlist li:last-child { border-bottom: 0; }
+  .tlist .nm { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .tlist .meta { color: var(--sub); font-size: 13px; white-space: nowrap; }
+
+  textarea#roster { width: 100%; min-height: 320px; line-height: 1.6; font-size: 15px; resize: vertical; }
+
+  /* 설정 */
+  .status { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; margin-bottom: 14px; font-weight: 600; }
+  .status.on { background: #e6f4ea; color: var(--sheet); }
+  .status.off { background: #fff4d6; color: #7a5200; }
+  .field { display: grid; gap: 6px; margin-bottom: 12px; }
+  .field label { font-weight: 600; font-size: 14px; }
+  .field input { width: 100%; }
+  ol.steps { margin: 0; padding-left: 20px; line-height: 1.9; }
+  ol.steps code { background: #f1f3f7; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+  .msgline { min-height: 20px; margin-top: 8px; font-size: 14px; font-weight: 600; }
+  .msgline.ok { color: var(--ok); } .msgline.err { color: var(--miss); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+
+  /* 로그인 */
+  #gate { max-width: 360px; margin: 12vh auto; background: var(--card); border-radius: 16px; padding: 28px; text-align: center; box-shadow: 0 4px 20px rgba(20,30,60,.08); }
+  #gate h2 { margin: 0 0 16px; }
+  #gate input { width: 100%; font-size: 22px; padding: 12px; text-align: center; letter-spacing: 6px; }
+  #gate .btn { width: 100%; justify-content: center; margin-top: 10px; padding: 12px; font-size: 16px; }
+  #gateMsg { color: var(--miss); min-height: 20px; margin-top: 10px; font-size: 14px; }
+
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1d2433; color: #fff;
+    padding: 10px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 99; }
+  #toast.show { opacity: 1; }
+  [hidden] { display: none !important; }
+  @media (max-width: 800px) {
+    header { padding: 12px 16px 0; } main { padding: 16px 16px 60px; }
+    .grid2 { grid-template-columns: 1fr; }
+    .addform { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate" hidden>
+  <h2>🔒 관리자 로그인</h2>
+  <input id="gatePin" type="password" inputmode="numeric" placeholder="비밀번호" autocomplete="off">
+  <button class="btn primary" id="gateBtn">확인</button>
+  <div id="gateMsg"></div>
+  <p class="hint" id="gateHint"></p>
+  <a class="btn" href="index.html" style="margin-top:4px;justify-content:center;width:100%">← 학생 화면</a>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="top">
+      <h1>📋 제출 현황 관리 <span class="badge" id="badge"></span></h1>
+      <div class="tools">
+        <button class="btn sheet" id="linkBtn">🔗 구글 스프레드시트 연동</button>
+        <a class="btn" id="openSheet" target="_blank" rel="noopener" hidden>📄 스프레드시트 열기</a>
+        <a class="btn" href="index.html" id="toStudent">📮 학생 화면</a>
+        <button class="btn" id="logout">로그아웃</button>
+      </div>
+    </div>
+    <nav id="tabs">
+      <button data-tab="status" class="on">📊 제출 현황</button>
+      <button data-tab="tasks">📝 과제 관리</button>
+      <button data-tab="roster">👥 학생 명단</button>
+      <button data-tab="settings">⚙️ 설정 · 연동</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="alert" id="alert" hidden></div>
+
+    <!-- 제출 현황 -->
+    <section id="tab-status">
+      <div class="cards" id="cards"></div>
+      <div class="panel" id="missPanel">
+        <h2><span id="missTitle"></span> <button class="btn" id="copyBtn">미제출자 복사</button></h2>
+        <div class="chips" id="missList"></div>
+      </div>
+      <div class="bar2">
+        <div class="legend hint">
+          <span><span class="dot on"></span> 학생 제출</span>
+          <span><span class="dot on manual"></span> 교사 확인</span>
+          <span><span class="dot"></span> 미제출</span>
+          <span>· 칸을 누르면 제출 처리 / 취소</span>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="onlyMiss"> 미제출 학생만</label>
+          <span class="hint" id="updated"></span>
+          <button class="btn" id="refreshBtn">↻ 새로고침</button>
+          <button class="btn" id="csvBtn">⬇ 엑셀(CSV)</button>
+        </div>
+      </div>
+      <div class="tablewrap"><table id="table"></table></div>
+    </section>
+
+    <!-- 과제 관리 -->
+    <section id="tab-tasks" hidden>
+      <div class="panel">
+        <h2>➕ 과제물 추가</h2>
+        <div class="addform">
+          <input type="text" id="newTask" placeholder="예: 수학여행 참가 동의서" maxlength="40">
+          <input type="date" id="newDue" title="마감일 (선택)">
+          <button class="btn primary" id="addTask">추가</button>
+        </div>
+        <p class="hint">추가하면 학생 화면의 제출 목록에 바로 나타납니다. 마감일은 선택 사항입니다.</p>
+      </div>
+      <div class="panel">
+        <h2>현재 받는 과제물 <span class="hint" id="taskCount"></span></h2>
+        <ul class="tlist" id="taskList"></ul>
+        <p class="hint">삭제하면 학생 화면과 현황표에서 사라집니다. 이미 제출된 기록은 스프레드시트 ‘제출기록’ 시트에 그대로 남습니다.</p>
+      </div>
+    </section>
+
+    <!-- 학생 명단 -->
+    <section id="tab-roster" hidden>
+      <div class="panel">
+        <h2>학생 명단 <span class="hint" id="rosterCount"></span></h2>
+        <p class="hint">한 줄에 한 명씩 <b>번호 이름</b> 으로 적으세요 (예: <code>1 김민준</code>). 번호 없이 이름만 적으면 순서대로 번호가 매겨집니다.<br>
+          엑셀에서 번호·이름 두 열을 복사해 붙여넣어도 됩니다.</p>
+        <textarea id="roster" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="saveRoster">명단 저장</button>
+          <span class="msgline" id="rosterMsg"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 설정 · 연동 -->
+    <section id="tab-settings" hidden>
+      <div class="grid2">
+        <div class="panel">
+          <h2>🔗 구글 스프레드시트 연동</h2>
+          <div class="status" id="linkStatus"></div>
+          <div class="field">
+            <label for="apiUrl">Apps Script 웹 앱 URL</label>
+            <input type="url" id="apiUrl" placeholder="https://script.google.com/macros/s/…/exec">
+          </div>
+          <div class="field">
+            <label for="sheetPin">스프레드시트 쪽 관리자 비밀번호 <span class="hint">(처음엔 1234)</span></label>
+            <input type="password" id="sheetPin" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="row">
+            <button class="btn sheet" id="connectBtn">연동하기</button>
+            <button class="btn danger" id="disconnectBtn">연동 해제</button>
+          </div>
+          <div class="msgline" id="linkMsg"></div>
+          <p class="hint">연동 정보는 <b>이 기기</b>에 저장됩니다. 학생용 태블릿에서도 시계를 눌러 관리자 페이지로 들어와 한 번 연동하세요.
+            모든 기기에 한꺼번에 적용하려면 GitHub 저장소의 <code>config.js</code> 에 URL을 적으면 됩니다.</p>
+        </div>
+
+        <div class="panel">
+          <h2>📘 처음 연동하는 방법</h2>
+          <ol class="steps">
+            <li><a href="https://sheets.new" target="_blank" rel="noopener">새 구글 스프레드시트 만들기</a></li>
+            <li>메뉴 <b>확장 프로그램 → Apps Script</b></li>
+            <li>코드를 모두 지우고 붙여넣기 <button class="btn" id="copyCode">📋 코드 복사</button></li>
+            <li>함수 <code>setup</code> 선택 → <b>▶ 실행</b> → 권한 허용</li>
+            <li><b>배포 → 새 배포 → 웹 앱</b><br>실행: <code>나</code> · 액세스: <code>모든 사용자</code></li>
+            <li>나온 <b>웹 앱 URL</b>을 왼쪽에 붙여넣고 <b>연동하기</b></li>
+          </ol>
+        </div>
+
+        <div class="panel">
+          <h2>🔑 관리자 비밀번호 변경</h2>
+          <div class="field"><label for="newPin1">새 비밀번호 (숫자 4~8자리)</label><input type="password" id="newPin1" inputmode="numeric"></div>
+          <div class="field"><label for="newPin2">한 번 더</label><input type="password" id="newPin2" inputmode="numeric"></div>
+          <button class="btn primary" id="changePin">변경</button>
+          <div class="msgline" id="pinMsg"></div>
+          <p class="hint" id="pinHint"></p>
+        </div>
+
+        <div class="panel" id="demoPanel">
+          <h2>🧪 데모 데이터</h2>
+          <p class="hint">연동 전에는 이 브라우저에만 저장되는 가상 데이터(학생 20명)로 동작합니다.</p>
+          <button class="btn danger" id="resetDemo">데모 데이터 초기화</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const { esc, session } = U;
+let pin = session.get('adminPin') || '';
+let D = null, sel = null, tab = 'status', map = new Map();
+const K = (no, name, task) => `${no}|${name}|${task}`;
+
+function toast(msg) {
+  $('toast').textContent = msg; $('toast').classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').classList.remove('show'), 2000);
+}
+
+/* ───── 로그인 ───── */
+function showGate(msg) {
+  $('app').hidden = true; $('gate').hidden = false;
+  $('gateMsg').textContent = msg || '';
+  $('gateHint').textContent = Api.isDemo ? '데모 모드 비밀번호: 1234' : '';
+  $('gatePin').value = ''; $('gatePin').focus();
+}
+function gateTry() { pin = $('gatePin').value.trim(); if (pin) { $('gateMsg').textContent = '확인 중…'; refresh(true); } }
+$('gateBtn').addEventListener('click', gateTry);
+$('gatePin').addEventListener('keydown', e => { if (e.key === 'Enter') gateTry(); });
+$('logout').addEventListener('click', () => { session.set('adminPin', null); location.href = 'index.html'; });
+
+/* ───── 데이터 ───── */
+async function refresh(loud) {
+  try {
+    D = await Api.call('getDashboard', { pin });
+    session.set('adminPin', pin);
+    $('gate').hidden = true; $('app').hidden = false; $('alert').hidden = true;
+    map = new Map(D.records.map(r => [K(r.no, r.name, r.task), r]));
+    if (!D.tasks.some(t => t.name === sel)) sel = D.tasks[0] ? D.tasks[0].name : null;
+    renderAll();
+  } catch (e) {
+    if (e.code === 'PIN' || !pin) return showGate(pin ? e.message : '');
+    // 연결 문제일 때는 설정 탭에서 고칠 수 있도록 화면은 열어 둠
+    if (!D) { D = { students: [], tasks: [], records: [], updated: '-', sheetUrl: '' }; map = new Map(); }
+    $('gate').hidden = true; $('app').hidden = false;
+    $('alert').textContent = '⚠ ' + (e.message || e);
+    $('alert').hidden = false;
+    renderAll();
+    if (loud && !D.students.length) switchTab('settings');
+  }
+}
+
+function renderAll() {
+  $('badge').className = 'badge ' + (Api.isDemo ? 'off' : 'on');
+  $('badge').textContent = Api.isDemo ? '데모 모드' : '구글 시트 연동됨';
+  $('openSheet').hidden = !D.sheetUrl;
+  if (D.sheetUrl) $('openSheet').href = D.sheetUrl;
+  renderStatus(); renderTasks(); renderSettings();
+  if (document.activeElement !== $('roster')) renderRoster();
+}
+
+/* ───── 탭 ───── */
+function switchTab(t) {
+  tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  ['status', 'tasks', 'roster', 'settings'].forEach(x => $('tab-' + x).hidden = x !== t);
+  if (t === 'roster') renderRoster();
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) switchTab(b.dataset.tab); });
+$('linkBtn').addEventListener('click', () => { switchTab('settings'); $('apiUrl').focus(); });
+
+/* ───── 제출 현황 ───── */
+const today = () => U.fmt(new Date()).slice(0, 10);
+function donut(pct) {
+  const r = 26, c = 2 * Math.PI * r;
+  return `<svg class="donut" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="${r}"/>` +
+    (pct ? `<circle class="val" cx="32" cy="32" r="${r}" stroke-dasharray="${c * pct / 100} ${c}" transform="rotate(-90 32 32)"/>` : '') +
+    `<text x="32" y="37" text-anchor="middle">${pct}%</text></svg>`;
+}
+
+function renderStatus() {
+  const total = D.students.length;
+  $('updated').textContent = D.updated ? `${D.updated} 기준` : '';
+  const counts = D.tasks.map(t => D.students.filter(s => map.has(K(s.no, s.name, t.name))).length);
+
+  $('cards').innerHTML = D.tasks.map((t, i) => {
+    const n = counts[i], pct = total ? Math.round(n / total * 100) : 0;
+    const late = /^\d{4}-\d{2}-\d{2}$/.test(t.due) && t.due < today() && n < total;
+    return `<div class="card ${t.name === sel ? 'sel' : ''} ${total && n === total ? 'full' : ''}" data-i="${i}">
+      ${donut(pct)}
+      <div style="min-width:0"><div class="t" title="${esc(t.name)}">${esc(t.name)}</div>
+      <div class="m"><b>${n}</b> / ${total}명 제출</div>
+      <div class="m ${late ? 'late' : ''}">${t.due ? '마감 ' + esc(U.due(t.due)) + (late ? ' (지남)' : '') : '마감일 없음'}</div></div>
+    </div>`;
+  }).join('') || `<div class="panel hint" style="grid-column:1/-1">받는 과제물이 없습니다. <b>📝 과제 관리</b> 탭에서 추가하세요.</div>`;
+
+  const missing = sel ? D.students.filter(s => !map.has(K(s.no, s.name, sel))) : [];
+  $('missPanel').hidden = !sel;
+  $('missTitle').textContent = `‘${sel}’ 미제출 ${missing.length}명`;
+  $('missList').innerHTML = missing.length
+    ? missing.map(s => `<span class="chip">${esc(s.no)} ${esc(s.name)}</span>`).join('')
+    : '<span class="allok">🎉 모두 제출했습니다!</span>';
+  $('copyBtn').hidden = !missing.length;
+
+  const onlyMiss = $('onlyMiss').checked;
+  const rows = D.students.filter(s => !onlyMiss || D.tasks.some(t => !map.has(K(s.no, s.name, t.name))));
+  const nT = D.tasks.length;
+  $('table').innerHTML =
+    `<thead><tr><th class="stu">학생</th>${D.tasks.map(t => `<th class="${t.name === sel ? 'selcol' : ''}">${esc(t.name)}</th>`).join('')}<th>제출률</th></tr></thead>` +
+    `<tbody>${rows.map(s => {
+      const idx = D.students.indexOf(s);
+      let n = 0;
+      const cells = D.tasks.map((t, j) => {
+        const r = map.get(K(s.no, s.name, t.name));
+        if (r) n++;
+        const tip = r ? `${r.time} 제출${r.memo ? ' · ' + r.memo : ''}` : '미제출';
+        return `<td class="c" data-s="${idx}" data-t="${j}" title="${esc(tip)}"><span class="dot ${r ? 'on' : ''} ${r && r.memo ? 'manual' : ''}"></span></td>`;
+      }).join('');
+      const pct = nT ? Math.round(n / nT * 100) : 0;
+      return `<tr><td class="stu"><small>${esc(s.no)}</small>${esc(s.name)}</td>${cells}
+        <td><div class="rate ${pct < 50 ? 'low' : ''}">${n}/${nT}<i><b style="width:${pct}%"></b></i></div></td></tr>`;
+    }).join('') || `<tr><td colspan="${nT + 2}" class="hint">${D.students.length ? '모든 학생이 다 제출했습니다 🎉' : '학생 명단이 비어 있습니다. 👥 학생 명단 탭에서 등록하세요.'}</td></tr>`}</tbody>` +
+    (D.students.length && nT ? `<tfoot><tr><td class="stu">제출 인원</td>${counts.map(c => `<td>${c}/${D.students.length}</td>`).join('')}<td></td></tr></tfoot>` : '');
+}
+
+$('cards').addEventListener('click', e => {
+  const c = e.target.closest('.card');
+  if (!c) return;
+  sel = D.tasks[+c.dataset.i].name;
+  renderStatus();
+});
+
+$('table').addEventListener('click', async e => {
+  const td = e.target.closest('td.c');
+  if (!td) return;
+  const s = D.students[+td.dataset.s], task = D.tasks[+td.dataset.t].name;
+  const has = map.has(K(s.no, s.name, task));
+  const q = has ? `${s.no}번 ${s.name} — ‘${task}’ 제출 기록을 취소할까요?`
+                : `${s.no}번 ${s.name} — ‘${task}’을(를) 제출한 것으로 처리할까요?\n(비고에 ‘교사 확인’으로 기록됩니다)`;
+  if (!confirm(q)) return;
+  try { await Api.call('toggleRecord', { pin, no: s.no, name: s.name, task }); await refresh(); toast(has ? '제출 기록을 취소했습니다' : '제출 처리했습니다'); }
+  catch (err) { alert('처리하지 못했습니다: ' + (err.message || err)); }
+});
+
+$('onlyMiss').addEventListener('change', renderStatus);
+$('refreshBtn').addEventListener('click', async () => { await refresh(); toast('새로고침했습니다'); });
+
+$('copyBtn').addEventListener('click', () => {
+  const missing = D.students.filter(s => !map.has(K(s.no, s.name, sel)));
+  const text = `[${sel}] 미제출 ${missing.length}명: ` + missing.map(s => `${s.no}번 ${s.name}`).join(', ');
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast('복사했습니다'), () => prompt('복사하세요', text));
+  else prompt('복사하세요', text);
+});
+
+$('csvBtn').addEventListener('click', () => {
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [['번호', '이름', ...D.tasks.map(t => t.name), '제출 수'].map(q).join(',')];
+  D.students.forEach(s => {
+    let n = 0;
+    const cells = D.tasks.map(t => { const r = map.get(K(s.no, s.name, t.name)); if (r) n++; return r ? '○ ' + r.time : ''; });
+    lines.push([s.no, s.name, ...cells, `${n}/${D.tasks.length}`].map(q).join(','));
+  });
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `제출현황_${today()}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+/* ───── 과제 관리 ───── */
+function renderTasks() {
+  const total = D.students.length;
+  $('taskCount').textContent = `${D.tasks.length}개`;
+  $('taskList').innerHTML = D.tasks.map((t, i) => {
+    const n = D.students.filter(s => map.has(K(s.no, s.name, t.name))).length;
+    return `<li><span class="nm">${esc(t.name)}</span>
+      <span class="meta">${t.due ? '마감 ' + esc(U.due(t.due)) + ' · ' : ''}${n}/${total}명 제출</span>
+      <button class="btn danger" data-del="${i}">삭제</button></li>`;
+  }).join('') || '<li class="hint">아직 과제물이 없습니다. 위에서 추가하세요.</li>';
+}
+
+async function addTask() {
+  const name = $('newTask').value.trim();
+  if (!name) return $('newTask').focus();
+  $('addTask').disabled = true;
+  try {
+    await Api.call('addTask', { pin, name, due: $('newDue').value });
+    $('newTask').value = ''; $('newDue').value = '';
+    await refresh();
+    toast(`‘${name}’ 추가했습니다`);
+  } catch (e) { alert(e.message || e); }
+  finally { $('addTask').disabled = false; }
+}
+$('addTask').addEventListener('click', addTask);
+$('newTask').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+$('taskList').addEventListener('click', async e => {
+  const b = e.target.closest('[data-del]');
+  if (!b) return;
+  const name = D.tasks[+b.dataset.del].name;
+  if (!confirm(`‘${name}’ 과제를 삭제할까요?\n학생 화면에서 사라집니다. (이미 제출된 기록은 스프레드시트에 남습니다)`)) return;
+  b.disabled = true;
+  try { await Api.call('deleteTask', { pin, name }); await refresh(); toast('삭제했습니다'); }
+  catch (err) { alert(err.message || err); b.disabled = false; }
+});
+
+/* ───── 학생 명단 ───── */
+function renderRoster() {
+  $('rosterCount').textContent = `${D.students.length}명`;
+  $('roster').value = D.students.map(s => `${s.no} ${s.name}`).join('\n');
+}
+function parseRoster(text) {
+  let auto = 0;
+  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const m = /^(\d+)[\s.,)\t번]*(.+)$/.exec(l);
+    auto++;
+    return m ? { no: m[1], name: m[2].trim() } : { no: String(auto), name: l };
+  });
+}
+$('saveRoster').addEventListener('click', async () => {
+  const list = parseRoster($('roster').value);
+  const names = new Set();
+  const dup = list.find(s => { const k = s.no + '|' + s.name; if (names.has(k)) return true; names.add(k); });
+  if (dup) return alert(`같은 학생이 두 번 있습니다: ${dup.no} ${dup.name}`);
+  if (!confirm(`${list.length}명으로 명단을 저장할까요?`)) return;
+  $('saveRoster').disabled = true;
+  try {
+    await Api.call('saveStudents', { pin, students: list });
+    $('roster').blur();
+    await refresh();
+    $('rosterMsg').className = 'msgline ok'; $('rosterMsg').textContent = '저장했습니다';
+  } catch (e) { $('rosterMsg').className = 'msgline err'; $('rosterMsg').textContent = e.message || e; }
+  finally { $('saveRoster').disabled = false; }
+});
+
+/* ───── 설정 · 연동 ───── */
+function renderSettings() {
+  const on = !Api.isDemo;
+  $('linkStatus').className = 'status ' + (on ? 'on' : 'off');
+  $('linkStatus').innerHTML = on
+    ? `✅ 연동됨${D.sheetName ? ` — <span>${esc(D.sheetName)}</span>` : ''}`
+    : '⚠ 연동 안 됨 — 지금은 데모 모드(이 브라우저에만 저장)입니다';
+  if (document.activeElement !== $('apiUrl')) $('apiUrl').value = Api.url;
+  $('disconnectBtn').hidden = !on;
+  $('demoPanel').hidden = on;
+  $('pinHint').textContent = on ? '구글 스프레드시트에 저장된 비밀번호가 바뀝니다. 모든 기기에 적용됩니다.' : '데모 모드의 비밀번호가 바뀝니다.';
+}
+
+$('connectBtn').addEventListener('click', async () => {
+  const url = $('apiUrl').value.trim(), sp = $('sheetPin').value.trim();
+  const msg = (t, ok) => { $('linkMsg').className = 'msgline ' + (ok ? 'ok' : 'err'); $('linkMsg').textContent = t; };
+  if (!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(url)) return msg('https://script.google.com/macros/s/…/exec 형태의 웹 앱 URL을 붙여넣으세요.');
+  if (!sp) return msg('스프레드시트 쪽 관리자 비밀번호를 입력하세요. (처음엔 1234)');
+  $('connectBtn').disabled = true;
+  msg('연결 확인 중…', true);
+  try {
+    const info = await Api.test(url, sp);
+    Api.setUrl(url);
+    pin = sp; session.set('adminPin', pin);
+    $('sheetPin').value = '';
+    msg(`연동되었습니다! (${info.sheetName})`, true);
+    await refresh();
+  } catch (e) { msg(e.message || String(e)); }
+  finally { $('connectBtn').disabled = false; }
+});
+
+$('disconnectBtn').addEventListener('click', () => {
+  if (!confirm('이 기기에서 구글 스프레드시트 연동을 해제하고 데모 모드로 돌아갈까요?\n(스프레드시트의 데이터는 지워지지 않습니다)')) return;
+  Api.setUrl('');
+  session.set('adminPin', null);
+  pin = '';
+  showGate('연동을 해제했습니다. 데모 비밀번호(1234)로 들어오세요.');
+});
+
+$('copyCode').addEventListener('click', async () => {
+  try {
+    const r = await fetch('apps-script/Code.gs', { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    await navigator.clipboard.writeText(await r.text());
+    toast('Apps Script 코드를 복사했습니다');
+  } catch (e) {
+    alert('자동 복사가 안 됩니다. GitHub 저장소의 apps-script/Code.gs 파일을 열어 내용을 복사하세요.');
+  }
+});
+
+$('changePin').addEventListener('click', async () => {
+  const a = $('newPin1').value.trim(), b = $('newPin2').value.trim();
+  const msg = (t, ok) => { $('pinMsg').className = 'msgline ' + (ok ? 'ok' : 'err'); $('pinMsg').textContent = t; };
+  if (!/^\d{4,8}$/.test(a)) return msg('숫자 4~8자리로 정하세요.');
+  if (a !== b) return msg('두 비밀번호가 다릅니다.');
+  try {
+    await Api.call('changePin', { pin, newPin: a });
+    pin = a; session.set('adminPin', pin);
+    $('newPin1').value = $('newPin2').value = '';
+    msg('변경했습니다.', true);
+  } catch (e) { msg(e.message || e); }
+});
+
+$('resetDemo').addEventListener('click', async () => {
+  if (!confirm('데모 데이터를 처음 상태로 되돌릴까요?')) return;
+  Api.resetDemo(); pin = '1234'; session.set('adminPin', pin);
+  await refresh(); toast('초기화했습니다');
+});
+
+// 30초마다 자동 새로고침 (데모 모드는 학생 화면 탭의 제출을 바로 반영)
+setInterval(() => { if (!$('app').hidden && tab === 'status') refresh(); }, 30000);
+window.addEventListener('storage', e => { if (Api.isDemo && e.key === Api.DEMO_KEY && !$('app').hidden) refresh(); });
+
+if (pin) refresh(true); else showGate();
+</script>
+</body>
+</html>
